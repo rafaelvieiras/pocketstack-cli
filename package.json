@@ -1,0 +1,60 @@
+{
+  "name": "pocketstack-cli",
+  "version": "0.1.0",
+  "description": "Command-line interface for PocketStack — manage your fleet from the terminal.",
+  "keywords": [
+    "pocketstack",
+    "pocketbase",
+    "cli",
+    "saas",
+    "backend"
+  ],
+  "license": "MIT",
+  "author": "Rafael Vieira (@rafaelvieiras)",
+  "homepage": "https://github.com/rafaelvieiras/pocketstack-cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rafaelvieiras/pocketstack-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rafaelvieiras/pocketstack-cli/issues"
+  },
+  "type": "module",
+  "bin": {
+    "pocketstack": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "scripts/install.sh",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --import tsx --test test/*.test.ts",
+    "compile": "node scripts/build-binaries.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.6.0",
+    "commander": "^15.0.0",
+    "env-paths": "^4.0.0",
+    "open": "^11.0.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.0.1",
+    "eslint": "^10.6.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.62.0"
+  }
+}
