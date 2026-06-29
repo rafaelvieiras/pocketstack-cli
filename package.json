@@ -20,6 +20,9 @@
     "url": "https://github.com/rafaelvieiras/pocketstack-cli/issues"
   },
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "pocketstack": "dist/index.js"
   },

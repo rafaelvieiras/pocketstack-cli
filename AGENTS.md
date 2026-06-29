@@ -106,8 +106,13 @@ Human status goes to **stderr**; structured data goes to **stdout**.
 1. Bump `version` in `package.json`. Commit.
 2. Tag `vX.Y.Z` and push the tag.
 3. `.github/workflows/release.yml` builds the binaries (bun), attaches them +
-   `SHA256SUMS` + `install.sh` to the GitHub Release, and publishes to npm
-   (requires the `NPM_TOKEN` secret).
+   `SHA256SUMS` + `install.sh` to the GitHub Release, and publishes to npm via
+   **OIDC Trusted Publishing** — no `NPM_TOKEN` secret. The `npm` job has
+   `id-token: write`, uses npm ≥ 11.5.1, and npm generates provenance
+   automatically. The publish step is idempotent (skips a version that already
+   exists). Trusted publishing is configured once on npmjs.com (package →
+   Settings → Trusted publishing): organization `rafaelvieiras`, repository
+   `pocketstack-cli`, workflow `release.yml`.
 
 The self-updater (`pocketstack upgrade`) checks the npm registry for the latest
 version and upgrades in place: binaries re-run `install.sh`; npm installs re-run
