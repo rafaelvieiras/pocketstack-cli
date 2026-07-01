@@ -45,14 +45,17 @@ src/
   index.ts            # entry: builds the commander program, global flags, error handling
   version.ts          # version + constants, IS_BINARY detection
   commands/           # one file per command, each exports register<Name>(program)
-    login.ts logout.ts whoami.ts upgrade.ts
+    login.ts logout.ts whoami.ts upgrade.ts import.ts
   lib/
     auth.ts           # browser login flow + token verification
     api.ts            # JSON fetch helper (bearer, error normalization)
+    apps.ts           # typed /api/cli client (list/create app, import, dedup lookup)
     config.ts         # credentials store (read/write, 0600)
     context.ts        # GlobalFlags, resolveGlobals(), isInteractive()
     output.ts         # colored status lines (stderr) + JSON (stdout)
-    tui.ts            # clack wrappers (intro, spinner, confirm…)
+    sha256.ts         # streamed file hashing (backup dedup key)
+    slug.ts           # app-id derivation from a name (regex-safe, collision suffix)
+    tui.ts            # clack wrappers (intro, spinner, confirm, select…)
     updater.ts        # version check + self-upgrade
     errors.ts         # CliError / ApiError
     util.ts

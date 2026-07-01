@@ -37,10 +37,11 @@ in `SHA256SUMS`.
 ## Quick start
 
 ```bash
-pocketstack login        # opens your browser to authorize, saves the token
-pocketstack whoami       # show the authenticated account
-pocketstack logout       # remove stored credentials
-pocketstack upgrade      # update to the latest version
+pocketstack login          # opens your browser to authorize, saves the token
+pocketstack whoami         # show the authenticated account
+pocketstack import ./dir   # migrate PocketBase backups into apps
+pocketstack logout         # remove stored credentials
+pocketstack upgrade        # update to the latest version
 ```
 
 ## Authentication
@@ -66,6 +67,39 @@ pocketstack --host https://app.example.com login
 # or
 export POCKETSTACK_HOST=http://app.pocketstack.localhost
 ```
+
+## Migrate apps (bulk import)
+
+Bring existing PocketBase apps into PocketStack by pointing the CLI at a folder
+of native PocketBase backup ZIPs (a `pb_data` export: `data.db` + `storage/` —
+generate one from your PocketBase admin under **Settings → Backups**, or by
+zipping `pb_data`):
+
+```bash
+pocketstack import ./backups
+```
+
+It scans the folder and asks how to proceed:
+
+- **One app per backup** — creates a new app for each backup (you name each one).
+- **Decide for each** — per backup, associate it with an existing app (this
+  **replaces** that app's data, with confirmation) or create a new one.
+
+Re-running is safe: a backup already imported is skipped, so you never end up
+with duplicate apps. A backup from a **newer** PocketBase than the platform is
+refused for that item only — the rest of the queue continues.
+
+Non-interactive (CI / scripts):
+
+```bash
+pocketstack import ./backups --mode app-per-backup --yes --json
+```
+
+| Flag | Description |
+| --- | --- |
+| `--mode app-per-backup\|interactive` | Choose the flow without prompting |
+| `--force` | Re-import even if the same file was already imported |
+| `--name-from filename` | Derive each app name from its backup file name |
 
 ## Scripting
 
