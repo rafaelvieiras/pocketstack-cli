@@ -101,6 +101,29 @@ pocketstack import ./backups --mode app-per-backup --yes --json
 | `--force` | Re-import even if the same file was already imported |
 | `--name-from filename` | Derive each app name from its backup file name |
 
+### Deduplication is per file, not per app
+
+Dedup keys on the **sha256 of the backup ZIP**, not on the app it came from. A
+backup that was already imported (byte-for-byte identical file) is skipped, so
+re-running the same folder never creates duplicates. But two backups of the
+**same** app taken at different times are different files with different hashes —
+so the CLI has no way to know they belong together.
+
+The practical consequence for bulk migrations:
+
+- **`--mode app-per-backup`** creates one app per backup ZIP. If a folder holds
+  several historical/incremental backups of the same app, you get **several
+  duplicate apps** — one per file. Keep this mode to **one backup per app** in
+  the folder.
+- To fold multiple backups into a **single existing app**, use the **interactive**
+  mode (`pocketstack import <dir>` with no `--mode`, or `--mode interactive`) and
+  choose *Associate with an existing app* for each — this **replaces** that app's
+  data with the chosen backup.
+- Use **`--force`** only when you deliberately want to re-import the exact same
+  file again.
+
+See [docs/IMPORT.md](./docs/IMPORT.md) for the full deduplication reference.
+
 ## Scripting
 
 Global flags available on every command:
