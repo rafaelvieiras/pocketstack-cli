@@ -106,16 +106,28 @@ Human status goes to **stderr**; structured data goes to **stdout**.
 
 ## Releasing
 
-1. Bump `version` in `package.json`. Commit.
-2. Tag `vX.Y.Z` and push the tag.
-3. `.github/workflows/release.yml` builds the binaries (bun), attaches them +
-   `SHA256SUMS` + `install.sh` to the GitHub Release, and publishes to npm via
-   **OIDC Trusted Publishing** — no `NPM_TOKEN` secret. The `npm` job has
-   `id-token: write`, uses npm ≥ 11.5.1, and npm generates provenance
-   automatically. The publish step is idempotent (skips a version that already
-   exists). Trusted publishing is configured once on npmjs.com (package →
-   Settings → Trusted publishing): organization `rafaelvieiras`, repository
-   `pocketstack-cli`, workflow `release.yml`.
+Releases are fully automated with [semantic-release](https://semantic-release.gitbook.io/).
+You do not bump the version, create the tag, or edit the changelog by hand.
+
+1. Merge Conventional-Commit PRs into `main`.
+2. On every push to `main`, `.github/workflows/release.yml` runs `semantic-release`,
+   which computes the next version from the commit types, updates `CHANGELOG.md`,
+   publishes to npm, creates the GitHub Release (with the standalone binaries +
+   `SHA256SUMS` + `install.sh` attached), tags `vX.Y.Z`, and commits the changelog
+   and version bump back to `main` as `chore(release): X.Y.Z [skip ci]`.
+3. Version bumps follow the commit types: `fix:`/`perf:` → patch, `feat:` → minor,
+   `feat!:` or a `BREAKING CHANGE:` footer → major. Commits of type `docs`, `chore`,
+   `ci`, `test`, `style`, `refactor` do not trigger a release on their own.
+
+npm publishing uses **OIDC Trusted Publishing** (no `NPM_TOKEN`): the `release`
+job has `id-token: write`, forces npm ≥ 11.5.1, and npm generates provenance
+automatically. `@semantic-release/npm` runs `npm publish` in that trusted context.
+Trusted publishing is configured once on npmjs.com (package → Settings → Trusted
+publishing): organization `rafaelvieiras`, repository `pocketstack-cli`, workflow
+`release.yml`.
+
+To preview a release without publishing, trigger the workflow manually
+(Actions → Release → Run workflow) with **dry run** enabled.
 
 The self-updater (`pocketstack upgrade`) checks the npm registry for the latest
 version and upgrades in place: binaries re-run `install.sh`; npm installs re-run
@@ -123,6 +135,14 @@ version and upgrades in place: binaries re-run `install.sh`; npm installs re-run
 
 ## Commit & PR style
 
-- Imperative, English commit subjects (e.g. `Add logout --all flag`).
-- Keep PRs focused. CI (lint + typecheck + build + test) must pass.
+- **Conventional Commits are required.** Every commit subject must follow
+  `type(scope): subject` (e.g. `fix(import): strip the backup timestamp`).
+  Allowed types: `feat`, `fix`, `perf`, `docs`, `style`, `refactor`, `test`,
+  `build`, `ci`, `chore`, `revert`. A `commit-msg` hook (husky + commitlint)
+  enforces this locally; the `Commitlint` CI job re-checks every commit in a PR.
+- Commit subjects are English, imperative, and lower-case after the type.
+- Releases are automated from these commits — see "Releasing". Use `feat:` for
+  user-facing features, `fix:`/`perf:` for patches, and `feat!:` or a
+  `BREAKING CHANGE:` footer for breaking changes.
+- Keep PRs focused. CI (lint + typecheck + build + test + commitlint) must pass.
 - Remember rule #2: **no AI co-author trailers, ever.**

@@ -2,58 +2,43 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run semantic-release in dry-run mode (no publish)"
+        type: boolean
+        default: true
 
 permissions:
-  contents: write
-  # Required for npm Trusted Publishing (OIDC) — no NPM_TOKEN needed.
-  id-token: write
+  contents: read
 
 jobs:
-  binaries:
-    name: Build binaries
+  release:
+    name: Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
-          node-version: "24"
-          cache: npm
+          node-version: lts/*
       - uses: oven-sh/setup-bun@v2
-      - run: npm ci
-      - run: node scripts/build-binaries.mjs
-      - name: Attach binaries to the GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            bin/pocketstack-*
-            bin/SHA256SUMS
-            scripts/install.sh
-          generate_release_notes: true
-
-  npm:
-    name: Publish to npm (OIDC)
-    runs-on: ubuntu-latest
-    needs: binaries
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          registry-url: "https://registry.npmjs.org"
-          cache: npm
-      # Trusted Publishing requires npm >= 11.5.1.
-      - run: npm install -g npm@11.6.2
-      - run: npm ci
-      - run: npm run build
-      - name: Publish (skips if the version already exists)
-        run: |
-          NAME="$(node -p "require('./package.json').name")"
-          VERSION="$(node -p "require('./package.json').version")"
-          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
-            echo "$NAME@$VERSION already published; skipping."
-          else
-            # OIDC Trusted Publishing: authenticates via id-token, provenance is
-            # generated automatically (no NODE_AUTH_TOKEN, no --provenance flag).
-            npm publish
-          fi
+      - name: Update npm (trusted publishing needs >= 11.5.1)
+        run: npm install -g npm@latest
+      - name: Install dependencies
+        run: npm ci
+      - name: Build npm bundle
+        run: npm run build
+      - name: Build standalone binaries
+        run: node scripts/build-binaries.mjs
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
