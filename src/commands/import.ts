@@ -325,8 +325,19 @@ async function chooseName(ctx: Ctx, file: string): Promise<string> {
   return suggestion;
 }
 
-function nameFromFile(file: string): string {
-  return basename(file, extname(file));
+/**
+ * Derive an app name from a backup file name.
+ *
+ * PocketBase backups are named `pb_backup_<name>_<YYYYMMDDHHMMSS>.zip`; strip the
+ * `pb_backup_` prefix and the trailing timestamp so the app is named after the
+ * original data (e.g. `pb_backup_my_app_20260101120000.zip` -> `my_app`). The
+ * `<name>` may itself contain underscores. Files that don't match the convention
+ * fall back to the bare file name (extension removed).
+ */
+export function nameFromFile(file: string): string {
+  const base = basename(file, extname(file));
+  const match = /^pb_backup_(.+)_\d{14}$/.exec(base);
+  return match?.[1] ?? base;
 }
 
 async function listZipFiles(dir: string): Promise<string[]> {
