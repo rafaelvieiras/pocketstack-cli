@@ -9,6 +9,7 @@ import { registerLogout } from "./commands/logout.js";
 import { registerWhoami } from "./commands/whoami.js";
 import { registerUpgrade } from "./commands/upgrade.js";
 import { registerImport } from "./commands/import.js";
+import { registerApps } from "./commands/apps.js";
 
 async function main(): Promise<void> {
   const program = new Command();
@@ -42,6 +43,7 @@ async function main(): Promise<void> {
   registerWhoami(program);
   registerUpgrade(program);
   registerImport(program);
+  registerApps(program);
 
   if (process.argv.length <= 2) {
     program.help();
