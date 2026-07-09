@@ -9,7 +9,6 @@ import type { GlobalFlags } from "../lib/context.js";
 import { ApiError, CliError } from "../lib/errors.js";
 import { colors, emitJson, info, warn } from "../lib/output.js";
 import { sha256File } from "../lib/sha256.js";
-import { deriveUniqueId } from "../lib/slug.js";
 import { brandIntro, promptConfirm, promptSelect, promptText, withSpinner } from "../lib/tui.js";
 import { BIN_NAME } from "../version.js";
 
@@ -167,23 +166,25 @@ export function registerImport(program: Command): void {
 
 /** Mode (a): create a brand-new app for every backup. */
 async function runAppPerBackup(ctx: Ctx, plan: BackupPlan[], apps: App[]): Promise<ResultRow[]> {
-  const taken = new Set(apps.map((a) => a.id));
   const rows: ResultRow[] = [];
+  const createdBySha = new Map<string, Dest>();
   for (const b of plan) {
     try {
-      // Idempotent re-run: if this exact backup was already imported, reuse that
-      // app instead of minting a new suffixed one. executeImport then skips it
-      // (default) or re-imports into the SAME app (--force) — never a duplicate
-      // app, never an orphan. Only genuinely new backups create an app, and
-      // `taken` (seeded with existing ids) keeps a new backup whose name
-      // collides with an unrelated app off that app.
+      // Idempotent re-run: if this exact backup (by sha256) was already imported
+      // into an app, reuse that app instead of creating a new one. App ids are
+      // server-generated now, so a re-exported (byte-different) backup of the
+      // same app can no longer be folded in by a deterministic id — only
+      // byte-identical files dedupe. `createAppForBackup` additionally folds
+      // duplicate copies of the same file within THIS run into one app.
+      // executeImport then skips a same-destination backup (default) or
+      // re-imports into the SAME app (--force) — never a duplicate app.
       let dest: Dest;
-      if (b.seenInApps.length > 0) {
-        const id = b.seenInApps[0] as string;
-        const existing = apps.find((a) => a.id === id);
-        dest = { id, name: existing?.name ?? id, created: false };
+      const [seen] = b.seenInApps;
+      if (seen !== undefined) {
+        const existing = apps.find((a) => a.id === seen);
+        dest = { id: seen, name: existing?.name ?? seen, created: false };
       } else {
-        dest = await makeApp(ctx, await chooseName(ctx, b.file), taken);
+        dest = await createAppForBackup(ctx, b, createdBySha);
       }
       rows.push(await executeImport(ctx, dest, b));
     } catch (err) {
@@ -195,8 +196,8 @@ async function runAppPerBackup(ctx: Ctx, plan: BackupPlan[], apps: App[]): Promi
 
 /** Mode (b): decide per backup — associate with an existing app or create new. */
 async function runInteractive(ctx: Ctx, plan: BackupPlan[], apps: App[]): Promise<ResultRow[]> {
-  const taken = new Set(apps.map((a) => a.id));
   const associated = new Set<string>();
+  const createdBySha = new Map<string, Dest>();
   const rows: ResultRow[] = [];
   let exhaustAsked = false;
   let createForRest = false;
@@ -237,7 +238,7 @@ async function runInteractive(ctx: Ctx, plan: BackupPlan[], apps: App[]): Promis
           associated.add(appId);
           dest = { id: appId, name: target.name, created: false };
         } else {
-          dest = await makeApp(ctx, await chooseName(ctx, b.file), taken);
+          dest = await createAppForBackup(ctx, b, createdBySha);
         }
       } else {
         if (available.length === 0 && !createForRest && !exhaustAsked) {
@@ -252,7 +253,7 @@ async function runInteractive(ctx: Ctx, plan: BackupPlan[], apps: App[]): Promis
           );
           if (choice === "rest") createForRest = true;
         }
-        dest = await makeApp(ctx, await chooseName(ctx, b.file), taken);
+        dest = await createAppForBackup(ctx, b, createdBySha);
       }
 
       rows.push(await executeImport(ctx, dest, b));
@@ -304,15 +305,39 @@ async function executeImport(ctx: Ctx, dest: Dest, b: BackupPlan): Promise<Resul
   }
 }
 
-/** Derive a unique id from `name`, create the app, and register the id. */
-async function makeApp(ctx: Ctx, name: string, taken: Set<string>): Promise<Dest> {
-  const id = deriveUniqueId(name, taken);
-  taken.add(id);
-  const created = await createApp(ctx.host, ctx.token, { id, name });
-  const finalId = created.id || id;
-  taken.add(finalId);
-  info(`Created app ${colors().bold(finalId)}.`);
-  return { id: finalId, name: created.name || name, created: true };
+/**
+ * Create an app by name and build the destination from the id the backend
+ * generated. App ids are always server-assigned; the CLI never picks or derives
+ * one from the name.
+ */
+async function makeApp(ctx: Ctx, name: string): Promise<Dest> {
+  const created = await createApp(ctx.host, ctx.token, { name });
+  info(`Created app ${colors().bold(created.id)}.`);
+  return { id: created.id, name: created.name || name, created: true };
+}
+
+/**
+ * Create a new app for a backup, or reuse the one we already created earlier in
+ * THIS run for a byte-identical backup. Because ids are server-generated, the
+ * cross-app sha256 pre-flight (taken at scan time) can't see apps created during
+ * this run, so we track sha256 -> created destination here to avoid silently
+ * minting duplicate apps for repeated copies of the same file. Recording the
+ * reused id in `seenInApps` lets {@link executeImport} treat it as already
+ * imported (skip by default, re-import into the same app with `--force`).
+ */
+async function createAppForBackup(
+  ctx: Ctx,
+  b: BackupPlan,
+  createdBySha: Map<string, Dest>,
+): Promise<Dest> {
+  const prior = createdBySha.get(b.sha256);
+  if (prior) {
+    if (!b.seenInApps.includes(prior.id)) b.seenInApps.push(prior.id);
+    return { ...prior, created: false };
+  }
+  const dest = await makeApp(ctx, await chooseName(ctx, b.file));
+  createdBySha.set(b.sha256, dest);
+  return dest;
 }
 
 /** Ask for an app name (interactive) or derive it from the file name. */

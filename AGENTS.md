@@ -54,7 +54,6 @@ src/
     context.ts        # GlobalFlags, resolveGlobals(), isInteractive()
     output.ts         # colored status lines (stderr) + JSON (stdout)
     sha256.ts         # streamed file hashing (backup dedup key)
-    slug.ts           # app-id derivation from a name (regex-safe, collision suffix)
     tui.ts            # clack wrappers (intro, spinner, confirm, select…)
     updater.ts        # version check + self-upgrade
     errors.ts         # CliError / ApiError
