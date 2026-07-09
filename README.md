@@ -39,6 +39,7 @@ in `SHA256SUMS`.
 ```bash
 pocketstack login          # opens your browser to authorize, saves the token
 pocketstack whoami         # show the authenticated account
+pocketstack apps list      # list the apps you own
 pocketstack import ./dir   # migrate PocketBase backups into apps
 pocketstack logout         # remove stored credentials
 pocketstack upgrade        # update to the latest version
@@ -66,6 +67,36 @@ Point at a different host (self-hosted, staging, local):
 pocketstack --host https://app.example.com login
 # or
 export POCKETSTACK_HOST=http://app.pocketstack.localhost
+```
+
+## List apps
+
+See every app you own, with its status and usage at a glance:
+
+```bash
+pocketstack apps list
+```
+
+```
+ID    NAME   STATUS   REFS  LAST USED
+acme  Acme   running     2  15m ago
+blog  Blog   idle        0  never
+```
+
+The `STATUS` column is `running` when the app is live and `idle` otherwise,
+`REFS` is the number of active connections, and `LAST USED` is a relative time
+(an app that has never been used shows `never`). The table is sorted by name.
+
+For scripting, `--json` prints the raw array on stdout:
+
+```bash
+pocketstack apps list --json | jq -r '.[].id'
+```
+
+```json
+[
+  { "id": "acme", "name": "Acme", "alive": true, "refs": 2, "lastUsed": "2026-07-08T11:45:00Z" }
+]
 ```
 
 ## Migrate apps (bulk import)

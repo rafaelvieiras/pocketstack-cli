@@ -1,6 +1,6 @@
 ---
 name: pocketstack-cli
-description: Use the PocketStack CLI (`pocketstack`) to authenticate with and manage a PocketStack account from the terminal, and to bulk-migrate existing PocketBase apps into PocketStack from local backup files. Use when the user wants to log in to PocketStack, save or check their PocketStack token/credentials, import or migrate PocketBase backups into apps, run `pocketstack` commands, or script PocketStack actions in CI. Covers install, the browser login flow, token-based (headless) login, bulk import of backups, and JSON output for automation.
+description: Use the PocketStack CLI (`pocketstack`) to authenticate with and manage a PocketStack account from the terminal, and to bulk-migrate existing PocketBase apps into PocketStack from local backup files. Use when the user wants to log in to PocketStack, save or check their PocketStack token/credentials, list their apps, import or migrate PocketBase backups into apps, run `pocketstack` commands, or script PocketStack actions in CI. Covers install, the browser login flow, token-based (headless) login, listing apps, bulk import of backups, and JSON output for automation.
 ---
 
 # PocketStack CLI
@@ -62,6 +62,27 @@ pocketstack logout --all -y --json   # remove all stored credentials
 ```
 
 `whoami` exits non-zero when not logged in — use that to gate scripts.
+
+## List apps
+
+```bash
+pocketstack apps list          # aligned table on stdout
+pocketstack apps list --json   # raw array, ideal for scripting
+```
+
+Each app reports its `id`, `name`, `status` (`running` when live, `idle`
+otherwise), `refs` (active connections), and `lastUsed` (an app that has never
+been used shows `never`). The interactive table is sorted by name; `--json`
+returns the raw array unsorted:
+
+```json
+[
+  { "id": "acme", "name": "Acme", "alive": true, "refs": 2, "lastUsed": "2026-07-08T11:45:00Z" },
+  { "id": "blog", "name": "Blog", "alive": false, "refs": 0, "lastUsed": "0001-01-01T00:00:00Z" }
+]
+```
+
+Parse it with `jq`, e.g. list every app id: `pocketstack apps list --json | jq -r '.[].id'`.
 
 ## Import / migrate apps
 
