@@ -47,11 +47,14 @@ export function listApps(host: string, token: string): Promise<App[]> {
   return apiFetch<App[]>(host, "/api/cli/apps", { token });
 }
 
-/** Create an app (idempotent by id). Returns credentials only when newly created. */
+/**
+ * Create an app by name. The backend always assigns the id (it is never
+ * client-chosen). Returns credentials only when the app is newly created.
+ */
 export function createApp(
   host: string,
   token: string,
-  input: { id?: string; name: string },
+  input: { name: string },
 ): Promise<CreateAppResult> {
   return apiFetch<CreateAppResult>(host, "/api/cli/apps", {
     token,

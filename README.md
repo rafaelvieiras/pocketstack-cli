@@ -85,9 +85,15 @@ It scans the folder and asks how to proceed:
 - **Decide for each** — per backup, associate it with an existing app (this
   **replaces** that app's data, with confirmation) or create a new one.
 
-Re-running is safe: a backup already imported is skipped, so you never end up
-with duplicate apps. A backup from a **newer** PocketBase than the platform is
-refused for that item only — the rest of the queue continues.
+Each app's id and subdomain (`https://<id>.pocketstack.host`) are assigned by
+the platform — a random id, not a slug of the name. The CLI sends only the name
+and uses the id the server returns.
+
+Re-running the **same files** is safe: a backup already imported (byte-for-byte)
+is skipped, so you never end up with duplicate apps. A re-exported backup is a
+different file, so it would create a new app — dedup is per file (sha256), not
+per app. A backup from a **newer** PocketBase than the platform is refused for
+that item only — the rest of the queue continues.
 
 Non-interactive (CI / scripts):
 
@@ -103,11 +109,12 @@ pocketstack import ./backups --mode app-per-backup --yes --json
 
 ### Deduplication is per file, not per app
 
-Dedup keys on the **sha256 of the backup ZIP**, not on the app it came from. A
-backup that was already imported (byte-for-byte identical file) is skipped, so
-re-running the same folder never creates duplicates. But two backups of the
-**same** app taken at different times are different files with different hashes —
-so the CLI has no way to know they belong together.
+Dedup keys on the **sha256 of the backup ZIP**, not on the app it came from —
+app ids are server-generated, so there is no name/id that could link a re-export
+back to its app. A backup that was already imported (byte-for-byte identical
+file) is skipped, so re-running the same files never creates duplicates. But two
+backups of the **same** app taken at different times are different files with
+different hashes — so the CLI has no way to know they belong together.
 
 The practical consequence for bulk migrations:
 

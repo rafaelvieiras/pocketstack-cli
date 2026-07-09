@@ -10,6 +10,15 @@ The behaviour is controlled with `--mode <app-per-backup|interactive>`, `--force
 (re-import a file even if it was already imported), and `--name-from filename`
 (derive each app name from its backup file name).
 
+## App ids and subdomains
+
+Every app's id is **assigned by the platform** — a short random identifier that
+also becomes its subdomain (`https://<id>.pocketstack.host`). You don't choose
+it, and it is **not** derived from the app name: two apps you name the same still
+get two different ids. The CLI sends only the app *name* when creating an app and
+uses whatever id the server returns. (Earlier versions turned the name into a
+slug and pinned that as the id; that is gone — ids are always server-generated.)
+
 ## Deduplication
 
 The `import` command deduplicates by the **sha256 hash of each backup ZIP** — it
@@ -21,9 +30,12 @@ historical migrations.
 - Before uploading, the CLI hashes each backup and runs a pre-flight check
   (`GET /api/cli/backups/{sha256}`) to see which apps already hold that exact
   file. The server is the final authority on dedup.
-- A backup whose bytes were already imported is reported as **skipped**, so
-  re-running the same folder is safe and idempotent — you never get duplicate
-  apps from re-runs.
+- A backup whose bytes were already imported is reported as **skipped**. Because
+  ids are server-generated, this byte-identical sha256 match is the *only* thing
+  that keeps a re-run safe: re-running a folder of the **same files** creates no
+  duplicate apps, but a freshly **re-exported** backup of an app you already
+  imported is a different file and *would* create a new app. Re-runs are no
+  longer deduplicated by a name-derived id.
 
 ### What dedup does *not* do
 
